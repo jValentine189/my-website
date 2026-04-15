@@ -1,0 +1,193 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Football</title>
+    <style>
+        body {
+            background-color: #002244;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            color: #69BE28;
+            margin-bottom: 10px;
+        }
+        canvas {
+            border: 4px solid #69BE28;
+            background-color: #1a4a1a;
+        }
+        #score {
+            color: #ffffff;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+        #message {
+            color: #69BE28;
+            font-size: 18px;
+            margin-top: 8px;
+        }
+        #backLink {
+            color: #A5ACAF;
+            margin-top: 15px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flappy Football</h1>
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="message">Press SPACE or Tap to Start!</div>
+    <a href="fromscratch.html" id="backLink">← Back to Seahawks Page</a>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const message = document.getElementById('message');
+
+        let ball, pipes, score, gameRunning, animationId;
+
+        function init() {
+            ball = { x: 80, y: 250, vy: 0, radius: 18 };
+            pipes = [];
+            score = 0;
+            gameRunning = false;
+            scoreDisplay.textContent = 'Score: 0';
+            message.textContent = 'Press SPACE or Tap to Start!';
+            draw();
+        }
+
+        function startGame() {
+            if (!gameRunning) {
+                gameRunning = true;
+                message.textContent = '';
+                pipes = [];
+                score = 0;
+                ball.y = 250;
+                ball.vy = 0;
+                scoreDisplay.textContent = 'Score: 0';
+                gameLoop();
+            }
+        }
+
+        function flap() {
+            if (gameRunning) {
+                ball.vy = -8;
+            } else {
+                startGame();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); flap(); }
+        });
+        canvas.addEventListener('click', flap);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); flap(); });
+
+        function spawnPipe() {
+            const gap = 140;
+            const topHeight = Math.random() * 200 + 60;
+            pipes.push({ x: 400, topHeight, gap });
+        }
+
+        let frameCount = 0;
+
+        function gameLoop() {
+            frameCount++;
+            if (frameCount % 90 === 0) spawnPipe();
+
+            ball.vy += 0.45;
+            ball.y += ball.vy;
+
+            pipes.forEach(p => { p.x -= 2.5; });
+            pipes = pipes.filter(p => p.x > -60);
+
+            pipes.forEach(p => {
+                if (ball.x + ball.radius > p.x && ball.x - ball.radius < p.x + 50) {
+                    if (ball.y - ball.radius < p.topHeight || ball.y + ball.radius > p.topHeight + p.gap) {
+                        endGame();
+                    }
+                }
+                if (p.x + 50 < ball.x && !p.scored) {
+                    p.scored = true;
+                    score++;
+                    scoreDisplay.textContent = 'Score: ' + score;
+                }
+            });
+
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                endGame();
+                return;
+            }
+
+            draw();
+            if (gameRunning) animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function drawFootball(x, y, radius) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radius * 1.3, radius, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.8, 0);
+            ctx.lineTo(radius * 0.8, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, -radius * 0.5);
+            ctx.lineTo(0, radius * 0.5);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawGoalPost(x, topHeight, gap) {
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x, 0, 50, topHeight);
+            ctx.fillRect(x, topHeight + gap, 50, canvas.height - topHeight - gap);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(x + 10, topHeight - 30, 5, 30);
+            ctx.fillRect(x + 35, topHeight - 30, 5, 30);
+            ctx.fillRect(x + 10, topHeight - 30, 30, 5);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1a4a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            pipes.forEach(p => drawGoalPost(p.x, p.topHeight, p.gap));
+            drawFootball(ball.x, ball.y, ball.radius);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            message.textContent = 'Game Over! Score: ' + score + ' — Tap or SPACE to restart';
+            frameCount = 0;
+        }
+
+        init();
+    </script>
+</body>
+</html>
